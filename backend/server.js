@@ -18,7 +18,11 @@ connectDB();
 connectCloudinary();
 
 // middlewares
-app.use(cors({ origin: ["http://localhost:5173",'http://localhost:5174'] }));
+app.use(cors({
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'https://doctor-appointment-frontend-eta.vercel.app'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true // If you’re using cookies or authentication
+  }));
 
 // Use raw body parser for webhook route
 app.use('/webhook', express.raw({type: 'application/json'}));
