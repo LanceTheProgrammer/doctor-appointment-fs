@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "postinstall":"npm rebuild bcrypt --build-from-source",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
