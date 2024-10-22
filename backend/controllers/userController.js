@@ -195,7 +195,11 @@ const bookAppointment = async (req, res) => {
     res.json({success:true,message:'Appointment booked'})
 
 
-  } catch (error) {}
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res.status(500).json({ success: false, message: error.message });
+
+  }
 };
 
 // API to get user appointments for frontend my-appointments page
