@@ -24,43 +24,42 @@ console.log('🚀 Starting server with configuration:', {
 connectDB();
 connectCloudinary();
 
-// CORS configuration with specific origins
+// Define allowed origins
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://doctor-appointment-frontend-eta.vercel.app"  // Your production frontend URL
+  ];
+  
+  // Single CORS configuration
   app.use(cors({
-    origin: ['https://doctor-appointment-frontend-9ix55ld7a-lances-projects-9b911d59.vercel.app'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  }))
-].filter(Boolean);
-
-console.log('🔒 Configured CORS with allowed origins:', allowedOrigins);
-
-app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) === -1) {
+        console.log('❌ CORS blocked for origin:', origin);
+        return callback(new Error('Not allowed by CORS'));
+      }
+      
       console.log('✅ CORS allowed for origin:', origin);
-      callback(null, true);
+      return callback(null, true);
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  }));
+  
+  // Important: Raw body parser must come before JSON parser for webhooks
+  const webhookPath = "/webhook";
+  app.post(webhookPath, express.raw({ type: "application/json" }));
+  app.use((req, res, next) => {
+    if (req.path === webhookPath && req.method === "POST") {
+      next();
     } else {
-      console.log('❌ CORS blocked for origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      express.json()(req, res, next);
     }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
-
-// Important: Raw body parser must come before JSON parser for webhooks
-const webhookPath = "/webhook";
-app.post(webhookPath, express.raw({ type: "application/json" }));
-app.use((req, res, next) => {
-  if (req.path === webhookPath && req.method === "POST") {
-    next();
-  } else {
-    express.json()(req, res, next);
-  }
-});
+  });
 
 app.use("/api/admin", adminRouter);
 app.use("/api/doctor", doctorRouter);
