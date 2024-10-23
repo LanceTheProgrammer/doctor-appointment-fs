@@ -22,7 +22,8 @@ connectCloudinary();
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:5174",
-    "https://doctor-appointment-frontend-eta.vercel.app"  // Your production frontend URL
+    "https://doctor-appointment-frontend-eta.vercel.app",  // Your production frontend URL
+    "https://doctor-appointment-frontend-4tchs5jyb-lances-projects-9b911d59.vercel.app"
   ];
   
   // Single CORS configuration
