@@ -28,7 +28,11 @@ connectCloudinary();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-  process.env.FRONTEND_URL,
+  app.use(cors({
+    origin: ['https://doctor-appointment-frontend-9ix55ld7a-lances-projects-9b911d59.vercel.app'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }))
 ].filter(Boolean);
 
 console.log('🔒 Configured CORS with allowed origins:', allowedOrigins);
