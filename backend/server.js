@@ -13,92 +13,48 @@ const app = express();
 const port = process.env.PORT || 4000;
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+
+
 connectDB();
 connectCloudinary();
 
 // Define allowed origins
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://doctor-appointment-frontend-eta.vercel.app",
-];
-
-// Detailed CORS options
-const corsOptions = {
-  origin: function (origin, callback) {
-    console.log("Request Origin:", origin);
-
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log("Allowing request with no origin");
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://doctor-appointment-frontend-eta.vercel.app"  // Your production frontend URL
+  ];
+  
+  // Single CORS configuration
+  app.use(cors({
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) === -1) {
+        console.log('❌ CORS blocked for origin:', origin);
+        return callback(new Error('Not allowed by CORS'));
+      }
+      
+      console.log('✅ CORS allowed for origin:', origin);
       return callback(null, true);
-    }
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log("Allowed origin:", origin);
-      callback(null, true);
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  }));
+  
+  // Important: Raw body parser must come before JSON parser for webhooks
+  const webhookPath = "/webhook";
+  app.post(webhookPath, express.raw({ type: "application/json" }));
+  app.use((req, res, next) => {
+    if (req.path === webhookPath && req.method === "POST") {
+      next();
     } else {
-      console.log("Blocked origin:", origin);
-      callback(new Error("Not allowed by CORS"));
+      express.json()(req, res, next);
     }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Accept",
-  ],
-  credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-};
-
-// Apply CORS middleware
-app.use(cors(corsOptions));
-
-// Handle preflight requests explicitly
-app.options("*", cors(corsOptions));
-
-// Additional headers middleware
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", req.headers.origin);
-  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With, Accept"
-  );
-  res.header("Access-Control-Allow-Credentials", true);
-
-  // Log request details for debugging
-  console.log("Request:", {
-    method: req.method,
-    path: req.path,
-    origin: req.headers.origin,
-    headers: req.headers,
   });
 
-  // Handle OPTIONS method
-  if (req.method === "OPTIONS") {
-    return res.status(204).send();
-  }
-  next();
-});
-
-// Important: Raw body parser must come before JSON parser for webhooks
-const webhookPath = "/webhook";
-app.post(webhookPath, express.raw({ type: "application/json" }));
-
-// JSON parser middleware
-app.use((req, res, next) => {
-  if (req.path === webhookPath && req.method === "POST") {
-    next();
-  } else {
-    express.json()(req, res, next);
-  }
-});
-
-// Routes
 app.use("/api/admin", adminRouter);
 app.use("/api/doctor", doctorRouter);
 app.use("/api/user", userRouter);
@@ -107,18 +63,18 @@ app.use("/api/user", userRouter);
 app.post("/api/create-checkout-session", async (req, res) => {
   try {
     const { appointmentId } = req.body;
-    console.log("📝 Creating checkout session for appointment:", appointmentId);
+    console.log('📝 Creating checkout session for appointment:', appointmentId);
 
     if (!appointmentId) {
-      throw new Error("Missing appointmentId in request body");
+      throw new Error('Missing appointmentId in request body');
     }
 
     const baseUrl =
       process.env.NODE_ENV === "production"
         ? "https://doctor-appointment-frontend-eta.vercel.app"
         : req.headers.origin || "http://localhost:5173";
-
-    console.log("🌐 Using base URL:", baseUrl);
+    
+    console.log('🌐 Using base URL:', baseUrl);
 
     const sessionConfig = {
       payment_method_types: ["card"],
@@ -142,7 +98,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
       },
     };
 
-    console.log("💳 Creating Stripe session with config:", {
+    console.log('💳 Creating Stripe session with config:', {
       ...sessionConfig,
       success_url: sessionConfig.success_url,
       cancel_url: sessionConfig.cancel_url,
@@ -150,7 +106,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
-    console.log("✅ Checkout session created:", {
+    console.log('✅ Checkout session created:', {
       sessionId: session.id,
       metadata: session.metadata,
     });
@@ -167,10 +123,10 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
 // Enhanced Webhook Handler
 app.post(webhookPath, async (req, res) => {
-  console.log("🔔 Webhook received");
-  console.log("📨 Webhook headers:", {
-    "stripe-signature": !!req.headers["stripe-signature"],
-    "content-type": req.headers["content-type"],
+  console.log('🔔 Webhook received');
+  console.log('📨 Webhook headers:', {
+    'stripe-signature': !!req.headers['stripe-signature'],
+    'content-type': req.headers['content-type'],
   });
 
   const sig = req.headers["stripe-signature"];
@@ -178,14 +134,15 @@ app.post(webhookPath, async (req, res) => {
 
   try {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    console.log("📝 Webhook secret exists:", !!webhookSecret);
-
+    console.log('📝 Webhook secret exists:', !!webhookSecret);
+    
     if (!webhookSecret) {
       throw new Error("Missing Stripe webhook secret");
     }
 
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    console.log("✅ Webhook verified, event type:", event.type);
+    console.log('✅ Webhook verified, event type:', event.type);
+    
   } catch (err) {
     console.error(`⚠️ Webhook signature verification failed:`, {
       error: err.message,
@@ -199,13 +156,13 @@ app.post(webhookPath, async (req, res) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        console.log("💳 Processing completed checkout session:", {
+        console.log('💳 Processing completed checkout session:', {
           sessionId: session.id,
           metadata: session.metadata,
         });
-
+        
         const appointmentId = session.metadata.appointmentId;
-        console.log("🏥 Appointment ID from metadata:", appointmentId);
+        console.log('🏥 Appointment ID from metadata:', appointmentId);
 
         if (!appointmentId) {
           throw new Error("No appointmentId found in session metadata");
