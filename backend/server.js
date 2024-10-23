@@ -13,48 +13,49 @@ const app = express();
 const port = process.env.PORT || 4000;
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-
-
 connectDB();
 connectCloudinary();
 
 // Define allowed origins
 const allowedOrigins = [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "https://doctor-appointment-frontend-eta.vercel.app",  // Your production frontend URL
-    "https://doctor-appointment-frontend-4tchs5jyb-lances-projects-9b911d59.vercel.app"
-  ];
-  
-  // Single CORS configuration
-  app.use(cors({
-    origin: function(origin, callback) {
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://doctor-appointment-frontend-eta.vercel.app", // Your production frontend URL
+  "https://doctor-appointment-frontend-4tchs5jyb-lances-projects-9b911d59.vercel.app",
+  "https://doctor-appointment-admin-beta.vercel.app/",
+];
+
+// Single CORS configuration
+app.use(
+  cors({
+    origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      
+
       if (allowedOrigins.indexOf(origin) === -1) {
-        console.log('❌ CORS blocked for origin:', origin);
-        return callback(new Error('Not allowed by CORS'));
+        console.log("❌ CORS blocked for origin:", origin);
+        return callback(new Error("Not allowed by CORS"));
       }
-      
-      console.log('✅ CORS allowed for origin:', origin);
+
+      console.log("✅ CORS allowed for origin:", origin);
       return callback(null, true);
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization','token'],
-    credentials: true
-  }));
-  
-  // Important: Raw body parser must come before JSON parser for webhooks
-  const webhookPath = "/webhook";
-  app.post(webhookPath, express.raw({ type: "application/json" }));
-  app.use((req, res, next) => {
-    if (req.path === webhookPath && req.method === "POST") {
-      next();
-    } else {
-      express.json()(req, res, next);
-    }
-  });
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "token"],
+    credentials: true,
+  })
+);
+
+// Important: Raw body parser must come before JSON parser for webhooks
+const webhookPath = "/webhook";
+app.post(webhookPath, express.raw({ type: "application/json" }));
+app.use((req, res, next) => {
+  if (req.path === webhookPath && req.method === "POST") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
 app.use("/api/admin", adminRouter);
 app.use("/api/doctor", doctorRouter);
@@ -64,18 +65,18 @@ app.use("/api/user", userRouter);
 app.post("/api/create-checkout-session", async (req, res) => {
   try {
     const { appointmentId } = req.body;
-    console.log('📝 Creating checkout session for appointment:', appointmentId);
+    console.log("📝 Creating checkout session for appointment:", appointmentId);
 
     if (!appointmentId) {
-      throw new Error('Missing appointmentId in request body');
+      throw new Error("Missing appointmentId in request body");
     }
 
     const baseUrl =
       process.env.NODE_ENV === "production"
         ? "https://doctor-appointment-frontend-eta.vercel.app"
         : req.headers.origin || "http://localhost:5173";
-    
-    console.log('🌐 Using base URL:', baseUrl);
+
+    console.log("🌐 Using base URL:", baseUrl);
 
     const sessionConfig = {
       payment_method_types: ["card"],
@@ -99,7 +100,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
       },
     };
 
-    console.log('💳 Creating Stripe session with config:', {
+    console.log("💳 Creating Stripe session with config:", {
       ...sessionConfig,
       success_url: sessionConfig.success_url,
       cancel_url: sessionConfig.cancel_url,
@@ -107,7 +108,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
-    console.log('✅ Checkout session created:', {
+    console.log("✅ Checkout session created:", {
       sessionId: session.id,
       metadata: session.metadata,
     });
@@ -124,10 +125,10 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
 // Enhanced Webhook Handler
 app.post(webhookPath, async (req, res) => {
-  console.log('🔔 Webhook received');
-  console.log('📨 Webhook headers:', {
-    'stripe-signature': !!req.headers['stripe-signature'],
-    'content-type': req.headers['content-type'],
+  console.log("🔔 Webhook received");
+  console.log("📨 Webhook headers:", {
+    "stripe-signature": !!req.headers["stripe-signature"],
+    "content-type": req.headers["content-type"],
   });
 
   const sig = req.headers["stripe-signature"];
@@ -135,15 +136,14 @@ app.post(webhookPath, async (req, res) => {
 
   try {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    console.log('📝 Webhook secret exists:', !!webhookSecret);
-    
+    console.log("📝 Webhook secret exists:", !!webhookSecret);
+
     if (!webhookSecret) {
       throw new Error("Missing Stripe webhook secret");
     }
 
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    console.log('✅ Webhook verified, event type:', event.type);
-    
+    console.log("✅ Webhook verified, event type:", event.type);
   } catch (err) {
     console.error(`⚠️ Webhook signature verification failed:`, {
       error: err.message,
@@ -157,13 +157,13 @@ app.post(webhookPath, async (req, res) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        console.log('💳 Processing completed checkout session:', {
+        console.log("💳 Processing completed checkout session:", {
           sessionId: session.id,
           metadata: session.metadata,
         });
-        
+
         const appointmentId = session.metadata.appointmentId;
-        console.log('🏥 Appointment ID from metadata:', appointmentId);
+        console.log("🏥 Appointment ID from metadata:", appointmentId);
 
         if (!appointmentId) {
           throw new Error("No appointmentId found in session metadata");
