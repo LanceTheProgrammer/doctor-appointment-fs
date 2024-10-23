@@ -5,6 +5,11 @@ import jwt from "jsonwebtoken";
 const authAdmin = async (req, res, next) => {
   try {
     const { atoken } = req.headers;
+
+    if (req.method === "OPTIONS") {
+      return next(); // Allow OPTIONS requests to pass through for CORS
+    }
+
     if (!atoken) {
       return res.json({
         success: false,

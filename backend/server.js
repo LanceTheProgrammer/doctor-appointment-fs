@@ -22,29 +22,27 @@ const allowedOrigins = [
   "http://localhost:5174",
   "https://doctor-appointment-frontend-eta.vercel.app", // Your production frontend URL
   "https://doctor-appointment-frontend-4tchs5jyb-lances-projects-9b911d59.vercel.app",
-  "https://doctor-appointment-admin-beta.vercel.app/",
+  "https://doctor-appointment-admin-beta.vercel.app",
 ];
 
 // Single CORS configuration
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.indexOf(origin) === -1) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
         console.log("❌ CORS blocked for origin:", origin);
-        return callback(new Error("Not allowed by CORS"));
+        callback(new Error("Not allowed by CORS"));
       }
-
-      console.log("✅ CORS allowed for origin:", origin);
-      return callback(null, true);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "token"],
     credentials: true,
   })
 );
+
+app.options('*', cors()); // Allow preflight requests for all routes
 
 // Important: Raw body parser must come before JSON parser for webhooks
 const webhookPath = "/webhook";

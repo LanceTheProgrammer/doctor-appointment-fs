@@ -176,6 +176,7 @@ const addDoctor = async (req, res) => {
 
 // API For admin Login
 const loginAdmin = async (req, res) => {
+  console.log("🔒 Admin login attempt from:", req.headers.origin);
   try {
     const { email, password } = req.body;
 
