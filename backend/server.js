@@ -37,7 +37,7 @@ app.use(
       }
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "token", "atoken"],
+    allowedHeaders: ["Content-Type", "Authorization", "token", "atoken", "dtoken"],
     credentials: true,
   })
 );
@@ -48,7 +48,7 @@ app.options("*", (req, res) => {
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, token, atoken"
+    "Content-Type, Authorization, token, atoken, dtoken"
   );
   res.sendStatus(200); // Respond to preflight with 200 OK
 });
