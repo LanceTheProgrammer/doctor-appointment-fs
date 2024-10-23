@@ -18,72 +18,40 @@ connectCloudinary();
 
 // Define allowed origins
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://doctor-appointment-frontend-eta.vercel.app",
-];
-
-// Detailed CORS options
-const corsOptions = {
-  origin: function (origin, callback) {
-    console.log("Request Origin:", origin);
-
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log("Allowing request with no origin");
-      return callback(null, true);
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://doctor-appointment-frontend-eta.vercel.app"
+  ];
+  
+  // Simple CORS middleware
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log("Allowed origin:", origin);
-      callback(null, true);
-    } else {
-      console.log("Blocked origin:", origin);
-      callback(new Error("Not allowed by CORS"));
+    
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
     }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Accept",
-  ],
-  credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-};
-
-// Apply CORS middleware
-app.use(cors(corsOptions));
-
-// Handle preflight requests explicitly
-app.options("*", cors(corsOptions));
-
-// Additional headers middleware
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", req.headers.origin);
-  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With, Accept"
-  );
-  res.header("Access-Control-Allow-Credentials", true);
-
-  // Log request details for debugging
-  console.log("Request:", {
-    method: req.method,
-    path: req.path,
-    origin: req.headers.origin,
-    headers: req.headers,
+    
+    next();
   });
-
-  // Handle OPTIONS method
-  if (req.method === "OPTIONS") {
-    return res.status(204).send();
-  }
-  next();
-});
+  
+  // Apply regular middleware
+  app.use(express.json());
+  
+  // Test endpoint to verify CORS
+  app.get('/api/test-cors', (req, res) => {
+    res.json({
+      message: 'CORS test successful',
+      origin: req.headers.origin,
+      headers: req.headers
+    });
+  });
 
 // Important: Raw body parser must come before JSON parser for webhooks
 const webhookPath = "/webhook";
@@ -97,6 +65,11 @@ app.use((req, res, next) => {
     express.json()(req, res, next);
   }
 });
+
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} | ${req.method} ${req.url} | Origin: ${req.headers.origin}`);
+    next();
+  });
 
 // Routes
 app.use("/api/admin", adminRouter);
