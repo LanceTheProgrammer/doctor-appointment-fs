@@ -37,14 +37,23 @@ app.use(
       }
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "token"],
+    allowedHeaders: ["Content-Type", "Authorization", "token", "atoken"],
     credentials: true,
   })
 );
 
-app.options('*', cors()); // Allow preflight requests for all routes
+// Allow preflight requests explicitly
+app.options("*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, token, atoken"
+  );
+  res.sendStatus(200); // Respond to preflight with 200 OK
+});
 
-// Important: Raw body parser must come before JSON parser for webhooks
+// Raw body parser for webhook route
 const webhookPath = "/webhook";
 app.post(webhookPath, express.raw({ type: "application/json" }));
 app.use((req, res, next) => {
